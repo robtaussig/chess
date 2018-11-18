@@ -105,8 +105,8 @@ yarn global add jest
 jest
 ```
 
-## How I used it from my server
-While it is not the cleanest code, I have a singly get endpoint that takes the board string as a param:
+## How I use it from my server
+While it is not the cleanest code, I have a single `GET` endpoint that takes the board string as a param:
 
 ```
 app.get('/chess/:board', (req, res, next) => {
@@ -258,4 +258,4 @@ Would parse and call 'addMove' on 1009 board positions that represent all board 
 ## Plans
 - There's really no excuse for this, but I have not yet implemented en-passant. It would be pretty trivial since the last move is captured in each board state.
 
-- Right now, at depth 4, most board positions can be evaluated in 2-6 seconds. This is a complete search; so in theory (assuming there are no bugs), it should find all possible mate in 2s (at the default settings). I am no satisfied with the speed, and so I plan to continue to investigate other optimization techniques (of which there are many). It is possible that I need to look into a more efficient way to represent board state, especially in terms of how many board representations will be stored in memory while performing the algorithm (this as opposed to creating a class instance that is capable of making moves and undoing moves)
+- Right now, at depth 4, most board positions can be evaluated in 2-6 seconds. This is a complete search; so in theory (assuming there are no bugs), it should find all possible mate in 2s (at the default settings). I am not satisfied with the speed, and so I plan to continue to investigate other optimization techniques (of which there are many). It is possible that I need to look into a more efficient way to represent board state, especially in terms of how many board representations will be stored in memory while performing the algorithm (this as opposed to creating a class instance that is capable of making moves and undoing moves)
