@@ -45,6 +45,8 @@ const LAST_MOVE_TO_ONES = 110;
 const positionString = (from, to) => `${from}-${to}`;
 const movedToPositionFromString = move => Number(move.split(EMPTY_SQUARE)[1]);
 const movedFromPositionFromString = move => Number(move.split(EMPTY_SQUARE)[0]);
+
+//Does not check for castling through check. That is handled in getKingMoves.
 const canCastleKingSide = (position, board, color) => {
   const emptySpaceBetween = board[position + 1] === EMPTY_SQUARE && board[position + 2] === EMPTY_SQUARE;
   if (emptySpaceBetween) {
@@ -236,6 +238,7 @@ class Board {
     return legalMoves.concat(this.getSteppingPiecesMovements(position, board, color, KING_QUEEN_MOVE_DIRECTIONS));
   }
 
+  //TODO: En Passant
   getPawnMovements(position, board, color, increments) {
     let legalMoves = [];
     for (let i = 0; i < increments.length; i++) {
@@ -384,6 +387,7 @@ class Board {
     return this.legalMoves.indexOf(positionString(from, to) !== -1);
   }
 
+  // Toggles meta information in addition to making move
   makeMove(from, to) {
     switch (this.board[from]) {
     case WHITE_KING:
@@ -461,6 +465,7 @@ const nonPieces = {
   '-': true,
 };
 
+//Last rank valued at 100 to encourage promotion
 const BLACK_PAWN_POSITIONAL_VALUE = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -591,6 +596,7 @@ const WHITE_QUEEN_POSITIONAL_VALUE = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
+//100's encourage castling if possible. Otherwise stay in place.
 const BLACK_KING_POSITIONAL_VALUE = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 100, 100, 0, 50, 0, 100, 0, 0,
@@ -682,16 +688,24 @@ class Eval {
     let bestMove = null;
     let bestMoveValue = isMaximizer ? -Infinity : Infinity;
     let value;
+
+    /*
+      Sorts moves at first level by a single-level-deep evaluation. Searching through the best branches early on
+      increases likelihood of pruning future branches
+    */
     const moves = root ? new Board(board).legalMoves.sort((a, b) => {
       const posA = Eval.snapshotEvaluation(testMove(a, board));
       const posB = Eval.snapshotEvaluation(testMove(b, board));
       return posA - posB;
     }) : new Board(board).legalMoves;
+  
     for (let i = 0; i < moves.length; i++) {
       const move = moves[i];
       const nextBoardRep = testMove(move, board);
       value = Eval.getBestMove(nextBoardRep, countNode, depth - 1, !isMaximizer, alpha, beta, false)[0];
-      countNode();
+      countNode(); // Caller passes a callback that increments a counter. Can also be invoked in tests to evaluate efficiency.
+      
+      //Mini-max
       if (isMaximizer) {
         if (value > bestMoveValue) {
           bestMoveValue = value;
@@ -705,6 +719,8 @@ class Eval {
         }
         beta = Math.min(beta, value);
       }
+
+      //Alpha-beta pruning. Amazing how simple it is.
       if (beta <= alpha) {
         break;
       }
