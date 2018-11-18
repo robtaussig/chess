@@ -381,12 +381,12 @@ describe('Evalulation', () => {
       expect(nodesExplored).toBeLessThan(9000); //Baseline from beginning implementation;
     });
     test('Finds mate in 3 at depth 6', () => {
-      // const mateInThree = '00000000000Br-B-q--00----N--K00r---pP--00---p--p-00p--k----00NpR-RP--00------Pp00-------n0000000000001111111312';
-      // const bestMove = Eval.getBestMove(mateInThree, ()=>{}, 6);
-      // expect(bestMove[1]).toBe(fromChessMove('D8-B6'));
-      // const newMateInThree = '00000000000-k-r----00ppr-nq-p00--p-b-p-00----Pp--00N-P--P--00R---Q---00PP--B--P00-KR-----0000000000001111112737';
-      // const newBestMove = Eval.getBestMove(newMateInThree, ()=>{}, 6);
-      // expect(newBestMove[1]).toBe(fromChessMove('E3-A7'));
+      const mateInThree = '00000000000Br-B-q--00----N--K00r---pP--00---p--p-00p--k----00NpR-RP--00------Pp00-------n0000000000001111111312';
+      const bestMove = Eval.getBestMove(mateInThree, ()=>{}, 6);
+      expect(bestMove[1]).toBe(fromChessMove('D8-B6'));
+      const newMateInThree = '00000000000-k-r----00ppr-nq-p00--p-b-p-00----Pp--00N-P--P--00R---Q---00PP--B--P00-KR-----0000000000001111112737';
+      const newBestMove = Eval.getBestMove(newMateInThree, ()=>{}, 6);
+      expect(newBestMove[1]).toBe(fromChessMove('E3-A7'));
     });
   });
 });
