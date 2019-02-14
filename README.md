@@ -1,6 +1,11 @@
 # Chess
 [Live Demo](https://robtaussig.com/chess)
 
+## Update
+Engine has been rewritten in Rust, which is currently being used in the live demo. Rust repo can be found [here](https://github.com/robtaussig/rust-chess).
+
+## Introduction
+
 Module with two purposes: it takes a string representation of a chess board and returns an array of legal moves, and if requested, best available move.
 
 Live demo is part of a React app that instantiates a [HTML Canvas chess UI](https://github.com/robtaussig/canvas-chess). Moves are sent to an express server that runs the board state through this module and returns all valid moves, and if it is the AI's turn, the best available move (remember to check off which side(s) should be played by an AI).
@@ -109,59 +114,76 @@ jest
 While it is not the cleanest code, I have a single `GET` endpoint that takes the board string as a param:
 
 ```
-app.get('/chess/:board', (req, res, next) => {
-
+app.get('/chess/:board', async (req, res, next) => {
   const board = req.params.board;
-  const validMoveResult = Chess.getValidMoves(board);
-
+  const response = Chess.getValidMoves(board);
   if (req.query && req.query.withBestMove === 'true') {
-
-    //Previously found best moves are stored in a database with the board state used as an index. I have also seeded my database with popular opening books.
-
-    return db.select('chessBestMoves', ['bestMove', 'nodesExplored', 'inOpeningBook'], {
+    const cachedResult = await  db.select('chessBestMoves', ['bestMove', 'nodesExplored', 'inOpeningBook'], {
       board,
-    })
-      .then(results => {
-        if (results && results.length > 0) {
-          const randomIndex = Math.floor(Math.random() * results.length);
-          const randomBestMove = results[randomIndex];
+    });
+    
+    if (cachedResult && cachedResult.length > 0) {
+      const randomIndex = Math.floor(Math.random() * cachedResult.length);
+      const randomResult = cachedResult[randomIndex];
 
-          return res.json({
-            legalMoves: validMoveResult.legalMoves,
-            isCheck: validMoveResult.isCheck,
-            bestMove: randomBestMove.bestMove,
-            nodesExplored: randomBestMove.nodesExplored,
-            inOpeningBook: randomBestMove.inOpeningBook,
-            fromCache: true,
-            timeElapsed: 0,
-          });
-        } else {
-          let nodesExplored = 0;
-          const countNode = () => nodesExplored++;
-          const start = new Date();
-          const bestMove = Chess.getBestMove(board, countNode);
-          const end = new Date();
-          const timeElapsed= end - start;
-
-          db.insert('chessBestMoves', {
-            board: board,
-            bestMove,
-            nodesExplored,
-          });
-
-          return res.json({
-            legalMoves: response.legalMoves,
-            isCheck: response.isCheck,
-            bestMove,
-            nodesExplored,
-            fromCache: false,
-            inOpeningBook: false,
-            timeElapsed,
-          });
-        }
+      return res.json({
+        legalMoves: response.legalMoves,
+        isCheck: response.isCheck,
+        bestMove: randomResult.bestMove,
+        nodesExplored: randomResult.nodesExplored,
+        inOpeningBook: randomResult.inOpeningBook,
+        fromCache: true,
+        timeElapsed: 0,
       });
-  } else {
 
+    } else {
+      const getMovesFromOutpout = output => {
+        try {
+          return JSON.parse(output.replace(/[[]]/,'').split(','));
+        } catch(e) {
+          console.error(e);
+          throw e;
+        }
+      };
+  
+      const formattedBoard = board.length === 100 ? board : board.slice(0, 100);
+      const isWhite = board[100] === '0';
+      const start = new Date();
+      const results = await new Promise((resolve, reject) => {
+        const command = `./bin/rust-chess/release/game ${formattedBoard} ${isWhite ? '-w' : '-b'}`;
+  
+        exec(command, (err, stdout, stderr) => {
+          if (err) {
+            return reject(err);
+          }
+          resolve({
+            bestMove: getMovesFromOutpout(stdout),
+            stderr: stderr,
+          });
+        });
+      });
+
+      const end = new Date();
+      const timeElapsed= end - start;
+
+      db.insert('chessBestMoves', {
+        board: board,
+        bestMove: `${results.bestMove[0]}-${results.bestMove[1]}`,
+        nodesExplored: 0,
+      });
+
+      return res.json({
+        legalMoves: response.legalMoves,
+        isCheck: response.isCheck,
+        bestMove: `${results.bestMove[0]}-${results.bestMove[1]}`,
+        nodesExplored: 0,
+        fromCache: false,
+        inOpeningBook: false,
+        timeElapsed,
+      });
+    }
+
+  } else {
     return res.json({
       legalMoves: response.legalMoves,
       isCheck: response.isCheck,
